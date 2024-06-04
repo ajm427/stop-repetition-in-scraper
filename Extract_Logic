@@ -1,0 +1,64 @@
+import os
+from bs4 import BeautifulSoup
+from collections import defaultdict
+
+def extract_text(file_path):
+    with open(file_path, "r", encoding="utf-8") as file:
+        soup = BeautifulSoup(file, "html.parser")
+        
+        # Remove unnecessary sections (common classes/IDs for menus, headers, footers)
+        for tag in soup(["nav", "header", "footer", "aside", "menu"]):
+            tag.decompose()
+
+        # Targeting common content tags
+        content = soup.find_all(['p', 'div', 'article', 'section'])
+        
+        # Extract text from the filtered content
+        text = "\n".join([element.get_text(separator="\n") for element in content])
+        return text
+
+def get_file_paths(directory):
+    file_paths = []
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            if file.endswith(".html") or file.endswith(".htm"):
+                file_paths.append(os.path.join(root, file))
+    return file_paths
+
+def remove_repeated_phrases(text, max_words=10):
+    phrases = text.split()
+    unique_phrases = []
+    seen_phrases = set()
+
+    for i in range(len(phrases) - max_words + 1):
+        phrase = " ".join(phrases[i:i + max_words])
+        if phrase not in seen_phrases:
+            seen_phrases.add(phrase)
+            unique_phrases.append(phrase)
+
+    return " ".join(unique_phrases)
+
+def extract_all_text(directory):
+    all_text = ""
+    file_paths = get_file_paths(directory)
+
+    for file_path in file_paths:
+        file_text = extract_text(file_path)
+        unique_text = remove_repeated_phrases(file_text)
+        all_text += f"File: {file_path}\n"  # Add the file path to the extracted text
+        all_text += unique_text
+        all_text += "\n\n"  # Add a separator between files
+
+    return all_text
+
+# Directory containing the HTML files
+directory = r"Your_Directory Here"
+
+all_text = extract_all_text(directory)
+
+# Save the extracted text to a file
+output_file_path = os.path.join(directory, "extracted_text.txt")
+with open(output_file_path, "w", encoding="utf-8") as output_file:
+    output_file.write(all_text)
+
+print(f"Text extracted and saved to {output_file_path}")
